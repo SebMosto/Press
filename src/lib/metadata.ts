@@ -89,9 +89,8 @@ export async function injectMetadata(pdfDoc: PDFDocument, metadata: ForensicMeta
 
   // Construct XMP
   // Note: pdf-lib doesn't have a high-level XMP builder, so we assume standard XMP structure.
-  // However, pdf-lib DOES allow setting metadata via standard APIs which populate the Info dictionary.
-  // For proper XMP (which is XML), strict forensic tools might prefer it.
-  // The requirement says "Write this to PDF XMP Metadata stream".
+  // We need to inject PDF/A identification schema to mark it as PDF/A compliant.
+  // We are targeting PDF/A-1b (Level B compliance) which is common for archival.
 
   const xmpData = `
     <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -100,12 +99,15 @@ export async function injectMetadata(pdfDoc: PDFDocument, metadata: ForensicMeta
         <rdf:Description rdf:about=""
           xmlns:xmp="http://ns.adobe.com/xap/1.0/"
           xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
-          xmlns:dc="http://purl.org/dc/elements/1.1/">
+          xmlns:dc="http://purl.org/dc/elements/1.1/"
+          xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
           <xmp:CreateDate>${createDate}</xmp:CreateDate>
           <xmp:ModifyDate>${new Date().toISOString()}</xmp:ModifyDate>
           <xmp:CreatorTool>${software}</xmp:CreatorTool>
           <tiff:Make>${make}</tiff:Make>
           <tiff:Model>${model}</tiff:Model>
+          <pdfaid:part>1</pdfaid:part>
+          <pdfaid:conformance>B</pdfaid:conformance>
         </rdf:Description>
       </rdf:RDF>
     </x:xmpmeta>
