@@ -1,73 +1,79 @@
-# React + TypeScript + Vite
+# Secure Document Compress & Metadata Preserver
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A secure, client-side application for compressing documents (PDF, JPEG, PNG) while preserving forensic metadata. This tool uses WebAssembly (WASM) to process files entirely within the browser—**no data is ever uploaded to a server**, ensuring zero-knowledge privacy.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Client-Side Compression:** Reduces file size (target < 4MB) using `ffmpeg.wasm` and `pdf-lib`.
+- **Metadata Preservation:** Extracts key forensic metadata (Original Date, Device Make/Model, Software) from the original file and re-injects it into the output PDF via XMP.
+- **Privacy First:**
+  - **GPS Stripping:** Automatically removes GPS coordinates to protect location privacy.
+  - **Zero Server Uploads:** All processing happens in the user's browser.
+- **Standardization:** Outputs valid PDF/A-1b (Level B) files suitable for archiving.
 
-## React Compiler
+## Quick Start (How to use locally)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+To download and test this application on your local machine:
 
-## Expanding the ESLint configuration
+1.  **Prerequisites:** Ensure you have [Node.js](https://nodejs.org/) (version 18 or higher) installed.
+2.  **Install Dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Run the Development Server:**
+    ```bash
+    npm run dev
+    ```
+4.  **Open in Browser:** Visit the URL shown in the terminal (usually `http://localhost:5173`).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Usage Instructions
+1.  **Drag & Drop:** Drag a file (PDF, JPG, PNG) onto the drop zone.
+2.  **Process:** The app will extract metadata, strip GPS data, and compress the file.
+3.  **Download:** Once complete, the compressed PDF will automatically download (or click "Download Again").
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Deployment Guide (Getting it into Production)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1. Build for Production
+To create the static files for deployment:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This will generate a `dist/` folder containing the optimized HTML, CSS, and JavaScript files.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 2. Hosting & Integration ("How to hook it up")
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Since this is a client-side Single Page Application (SPA), you can host the contents of the `dist/` folder on any static hosting provider (Vercel, Netlify, AWS S3, etc.).
+
+**Crucial Requirement: Security Headers**
+This application uses `SharedArrayBuffer` for high-performance WASM processing (ffmpeg). This requires your web server to serve the following response headers:
+
+```http
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
 ```
+
+**If these headers are missing, the application will fail with an error.**
+
+#### Hosting Options:
+
+*   **Vercel:** A `vercel.json` file is already included in this repository. Deploying to Vercel requires zero configuration—it will just work.
+*   **Netlify:** Create a `netlify.toml` with the headers specified above.
+*   **Nginx/Apache:** Configure your server block/htaccess to send the headers.
+
+### Integration with an Existing Site
+
+If you want to "hook this up" to your existing website, you have two main options:
+
+1.  **Subdomain (Recommended):**
+    Deploy this app to `compress.your-site.com` and link to it from your main site. This is the cleanest and most reliable method given the strict security headers required.
+
+2.  **Iframe Embedding:**
+    You can embed the app in an `<iframe>`, but your parent page *must* also comply with the Cross-Origin isolation requirements, or the iframe must be permitted to run in isolation. This can be complex to set up correctly. We strongly recommend the subdomain approach.
+
+## Project Structure
+
+- `src/lib/metadata.ts`: Logic for extracting EXIF/XMP and injecting it back into PDFs.
+- `src/lib/processor.ts`: Core pipeline—rasterizes PDFs, compresses images via FFmpeg, and rebuilds the document.
+- `src/App.tsx`: Main UI component.
